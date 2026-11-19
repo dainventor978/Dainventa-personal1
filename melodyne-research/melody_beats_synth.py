@@ -102,6 +102,34 @@ def render(events, patch_name="warm_pad", rate=RATE):
     # Smooth bounded output, no clipping.
     return b"".join(struct.pack("<h", int(32767 * math.tanh(x))) for x in mix)
 
+# Instrument-aware TriFusion defaults. Conservative settings preserve acoustic transients.
+INSTRUMENT_MATRICES = {
+    "grand_piano": {"drive": 1.15, "ceiling": .82, "output": .94, "eq_low": 0.0, "eq_high": .06},
+    "electric_keys": {"drive": 1.35, "ceiling": .80, "output": .91, "eq_low": 0.0, "eq_high": .03},
+    "finger_bass": {"drive": 1.35, "ceiling": .74, "output": .88, "eq_low": .14, "eq_high": -.12},
+    "synth_bass": {"drive": 1.45, "ceiling": .73, "output": .86, "eq_low": .18, "eq_high": -.12},
+    "clean_guitar": {"drive": 1.25, "ceiling": .80, "output": .90, "eq_low": -.04, "eq_high": .07},
+    "harp": {"drive": 1.10, "ceiling": .84, "output": .94, "eq_low": -.04, "eq_high": .09},
+    "violin": {"drive": 1.15, "ceiling": .80, "output": .92, "eq_low": -.04, "eq_high": -.03},
+    "string_ensemble": {"drive": 1.20, "ceiling": .77, "output": .90, "eq_low": .02, "eq_high": -.04},
+    "trumpet": {"drive": 1.20, "ceiling": .75, "output": .87, "eq_low": -.04, "eq_high": -.10},
+    "saxophone": {"drive": 1.22, "ceiling": .77, "output": .89, "eq_low": .01, "eq_high": -.05},
+    "flute": {"drive": 1.08, "ceiling": .84, "output": .95, "eq_low": -.07, "eq_high": .04},
+    "warm_pad": {"drive": 1.30, "ceiling": .77, "output": .90, "eq_low": .04, "eq_high": -.04},
+}
+
+def instrument_matrix(patch_name, events):
+    """Combine instrument profile and MIDI-aware control, without modifying notes."""
+    if patch_name not in PATCHES:
+        raise ValueError("Unknown instrument patch")
+    base = dict(INSTRUMENT_MATRICES[patch_name])
+    if events:
+        dynamic = trifusion_matrix(events)
+        base["drive"] = max(.5, min(3., base["drive"] * dynamic["drive"] / 1.8))
+        base["ceiling"] = max(.5, min(.95, min(base["ceiling"], dynamic["ceiling"])))
+    return base
+
+
 def trifusion_matrix(events):
     """Map melody-note statistics to safe TriFusion processing parameters.
     This control matrix reads MIDI events; it does not alter or generate notes.
@@ -132,13 +160,21 @@ def trifusion_process(pcm, matrix=None):
     drive, ceiling, output = (matrix[k] for k in ("drive", "ceiling", "output"))
     if not (0.5 <= drive <= 3.0 and 0.5 <= ceiling <= 0.95 and 0 <= output <= 1):
         raise ValueError("Invalid TriFusion matrix settings")
+    eq_low = matrix.get("eq_low", 0.0)
+    eq_high = matrix.get("eq_high", 0.0)
+    if not (-.3 <= eq_low <= .3 and -.3 <= eq_high <= .3):
+        raise ValueError("Invalid instrument EQ settings")
+    low_state = 0.0
     last_input = last_output = envelope_peak = 0.0
     result = bytearray(len(pcm))
     for i in range(0, len(pcm), 2):
         sample = struct.unpack_from("<h", pcm, i)[0] / 32768.0
         dc = sample - last_input + 0.995 * last_output
         last_input, last_output = sample, dc
-        saturated = math.tanh(dc * drive) / math.tanh(drive)
+        # Simple two-band tilt EQ: low-pass state plus complementary high band.
+        low_state += 0.025 * (dc - low_state)
+        shaped = dc + eq_low * low_state + eq_high * (dc - low_state)
+        saturated = math.tanh(shaped * drive) / math.tanh(drive)
         envelope_peak = max(abs(saturated), envelope_peak * 0.9995)
         gain = ceiling / envelope_peak if envelope_peak > ceiling else 1.0
         processed = max(-0.98, min(0.98, saturated * gain * output))
@@ -148,7 +184,7 @@ def trifusion_process(pcm, matrix=None):
 def write_wav(filename, events, patch_name="warm_pad", trifusion=False):
     pcm = render(events, patch_name)
     if trifusion:
-        pcm = trifusion_process(pcm, trifusion_matrix(events))
+        pcm = trifusion_process(pcm, instrument_matrix(patch_name, events))
     with wave.open(str(filename), "wb") as wav:
         wav.setnchannels(1)
         wav.setsampwidth(2)
