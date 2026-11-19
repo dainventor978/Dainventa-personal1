@@ -55,6 +55,10 @@ jobs:
           test -f dist/OV2.vst3/Contents/MacOS/OV2
           test -f dist/OV1TriFusion.vst3/Contents/MacOS/OV1TriFusion
           test -f dist/OV2TriFusion.vst3/Contents/MacOS/OV2TriFusion
+          for name in OV1 OV2 OV1TriFusion OV2TriFusion; do
+            test -f "dist/${name}.component/Contents/Info.plist"
+            test -f "dist/${name}.component/Contents/MacOS/${name}"
+          done
           mkdir -p installer-root/Library/Audio/Plug-Ins/VST3 installer-root/Library/Audio/Plug-Ins/Components
           cp -R dist/*.vst3 installer-root/Library/Audio/Plug-Ins/VST3/
           cp -R dist/*.component installer-root/Library/Audio/Plug-Ins/Components/
