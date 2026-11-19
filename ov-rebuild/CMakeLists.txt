@@ -5,11 +5,16 @@ include(FetchContent)
 FetchContent_Declare(JUCE GIT_REPOSITORY https://github.com/juce-framework/JUCE.git GIT_TAG 8.0.10 GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(JUCE)
 foreach(PRODUCT IN ITEMS OV1 OV2 TriFusion)
+  if(PRODUCT STREQUAL "TriFusion")
+    set(PLUGIN_ID TrFu)
+  else()
+    set(PLUGIN_ID ${PRODUCT}A)
+  endif()
   juce_add_plugin(${PRODUCT}
     COMPANY_NAME "Sound Head Developments"
     BUNDLE_ID "com.soundhead.${PRODUCT}"
     PLUGIN_MANUFACTURER_CODE ShDv
-    PLUGIN_CODE ${PRODUCT}A
+    PLUGIN_CODE ${PLUGIN_ID}
     FORMATS VST3 AU
     PRODUCT_NAME "${PRODUCT}"
     IS_SYNTH FALSE
