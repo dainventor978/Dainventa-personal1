@@ -88,8 +88,10 @@ jobs:
           lsbom expanded-pkg/Bom | grep -q 'OV1TriFusion.component'
           lsbom expanded-pkg/Bom | grep -q 'OV2TriFusion.component'
           # Install the generated package into a temporary root to verify its payload.
-          pkgutil --payload-files OV1_OV2_macOS_Intel_unsigned.pkg | grep -q 'OV1.vst3'
-          pkgutil --payload-files OV1_OV2_macOS_Intel_unsigned.pkg | grep -q 'OV2TriFusion.component'
+          for name in OV1 OV2 OV1TriFusion OV2TriFusion; do
+            pkgutil --payload-files OV1_OV2_macOS_Intel_unsigned.pkg | grep -q "${name}.vst3"
+            pkgutil --payload-files OV1_OV2_macOS_Intel_unsigned.pkg | grep -q "${name}.component"
+          done
           cd dist && zip -qr ../OV1_OV2_macOS_Intel.zip .
       - uses: actions/upload-artifact@v4
         with:
