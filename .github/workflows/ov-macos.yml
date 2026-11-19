@@ -20,6 +20,18 @@ jobs:
           cmake --version
       - name: Configure
         run: cmake -S ov-rebuild -B build -G Xcode -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64
+      - name: Save configure diagnostics
+        if: failure()
+        run: |
+          mkdir -p diagnostics
+          find build -name CMakeError.log -o -name CMakeConfigureLog.yaml | while read -r file; do cp "$file" diagnostics/; done
+      - name: Upload configure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OV-macOS-configure-failure
+          path: diagnostics/
+          if-no-files-found: ignore
       - name: Build all four OV plugins
         run: cmake --build build --config Release --parallel 3
       - name: Validate compiled plugin architectures
