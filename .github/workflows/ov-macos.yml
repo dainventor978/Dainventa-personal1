@@ -33,7 +33,17 @@ jobs:
           path: diagnostics/
           if-no-files-found: ignore
       - name: Build all four OV plugins
-        run: cmake --build build --config Release --parallel 3
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake --build build --config Release --parallel 3 2>&1 | tee ov-build.log
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OV-macOS-build-log
+          path: ov-build.log
+          if-no-files-found: ignore
       - name: Validate compiled plugin architectures
         run: |
           file build/OV1_artefacts/Release/VST3/OV1.vst3/Contents/MacOS/OV1
