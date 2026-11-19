@@ -71,6 +71,8 @@ jobs:
           pkgbuild --root installer-root --identifier com.soundhead.ovplugins --version 0.1.0 --install-location / OV1_OV2_macOS_Intel_unsigned.pkg
           pkgutil --expand OV1_OV2_macOS_Intel_unsigned.pkg expanded-pkg
           test -f expanded-pkg/PackageInfo
+          # Confirm the package contains the expected install destination.
+          grep -q 'install-location="/"' expanded-pkg/PackageInfo
           test -f expanded-pkg/Bom
           # Verify every installed bundle's executable is Intel-compatible.
           for name in OV1 OV2 OV1TriFusion OV2TriFusion; do
