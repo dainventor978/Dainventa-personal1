@@ -1,0 +1,27 @@
+name: OV1 and OV2 macOS plugins
+on:
+  push:
+    paths:
+      - 'ov-rebuild/**'
+      - '.github/workflows/ov-macos.yml'
+  workflow_dispatch:
+jobs:
+  macos:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S ov-rebuild -B build -G Xcode -DCMAKE_BUILD_TYPE=Release
+      - name: Build OV1 and OV2
+        run: cmake --build build --config Release --parallel 3
+      - name: Bundle plugin downloads
+        run: |
+          mkdir -p dist
+          find build -type d \( -name 'OV1.vst3' -o -name 'OV2.vst3' -o -name 'OV1.component' -o -name 'OV2.component' \) -prune -exec cp -R {} dist/ \;
+          test -d dist/OV1.vst3
+          test -d dist/OV2.vst3
+          cd dist && zip -qr ../OV1_OV2_macOS_Intel.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OV1-OV2-macOS-Intel-plugins
+          path: OV1_OV2_macOS_Intel.zip
