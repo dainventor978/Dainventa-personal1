@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 
 int main() {
     const float signal[] = {0.0f, 0.5f, -0.5f, 0.5f, -0.5f};
