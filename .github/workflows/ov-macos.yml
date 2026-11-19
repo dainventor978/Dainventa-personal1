@@ -12,6 +12,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Offline DSP regression
         run: python3 ov-rebuild/test_dsp.py
+      - name: Confirm Intel macOS runner and toolchain
+        run: |
+          test "$(uname -s)" = Darwin
+          test "$(uname -m)" = x86_64
+          xcodebuild -version
+          cmake --version
       - name: Configure
         run: cmake -S ov-rebuild -B build -G Xcode -DCMAKE_BUILD_TYPE=Release
       - name: Build OV1 and OV2
