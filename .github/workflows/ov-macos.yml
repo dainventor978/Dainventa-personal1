@@ -20,6 +20,13 @@ jobs:
           file build/OV2_artefacts/Release/VST3/OV2.vst3/Contents/MacOS/OV2
           lipo -archs build/OV1_artefacts/Release/VST3/OV1.vst3/Contents/MacOS/OV1 | grep -q x86_64
           lipo -archs build/OV2_artefacts/Release/VST3/OV2.vst3/Contents/MacOS/OV2 | grep -q x86_64
+      - name: Validate Audio Unit registration
+        run: |
+          mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
+          cp -R build/OV1_artefacts/Release/AU/OV1.component "$HOME/Library/Audio/Plug-Ins/Components/"
+          cp -R build/OV2_artefacts/Release/AU/OV2.component "$HOME/Library/Audio/Plug-Ins/Components/"
+          auval -v aufx OV1A ShDv
+          auval -v aufx OV2A ShDv
       - name: Bundle plugin downloads
         run: |
           mkdir -p dist
