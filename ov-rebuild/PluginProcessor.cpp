@@ -10,7 +10,7 @@ public:
     p.push_back(std::make_unique<juce::AudioParameterFloat>("drive","Drive",juce::NormalisableRange<float>(0.f,24.f,0.01f),6.f));
     p.push_back(std::make_unique<juce::AudioParameterFloat>("mix","Mix",juce::NormalisableRange<float>(0.f,1.f,0.001f),1.f));
     p.push_back(std::make_unique<juce::AudioParameterFloat>("output","Output",juce::NormalisableRange<float>(-24.f,12.f,0.01f),0.f));
-    return {p.begin(),p.end()};
+    return juce::AudioProcessorValueTreeState::ParameterLayout(std::move(p));
   }
   const juce::String getName() const override {
 #if defined(OV_PRODUCT_OV1)
