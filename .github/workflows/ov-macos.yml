@@ -50,7 +50,7 @@ jobs:
           test -d dist/OV2TriFusion.component
           test -f dist/OV1.vst3/Contents/Info.plist
           test -f dist/OV2.vst3/Contents/Info.plist
-          plutil -lint dist/OV1.vst3/Contents/Info.plist dist/OV2.vst3/Contents/Info.plist
+          plutil -lint dist/*.vst3/Contents/Info.plist
           test -f dist/OV1.vst3/Contents/MacOS/OV1
           test -f dist/OV2.vst3/Contents/MacOS/OV2
           test -f dist/OV1TriFusion.vst3/Contents/MacOS/OV1TriFusion
