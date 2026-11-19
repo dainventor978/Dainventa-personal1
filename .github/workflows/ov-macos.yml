@@ -37,6 +37,13 @@ jobs:
           cp -R dist/OV1.vst3 dist/OV2.vst3 installer-root/Library/Audio/Plug-Ins/VST3/
           cp -R dist/OV1.component dist/OV2.component installer-root/Library/Audio/Plug-Ins/Components/
           pkgbuild --root installer-root --identifier com.soundhead.ovplugins --version 0.1.0 --install-location / OV1_OV2_macOS_Intel_unsigned.pkg
+          pkgutil --expand OV1_OV2_macOS_Intel_unsigned.pkg expanded-pkg
+          test -f expanded-pkg/PackageInfo
+          test -f expanded-pkg/Bom
+          lsbom expanded-pkg/Bom | grep -q 'OV1.vst3'
+          lsbom expanded-pkg/Bom | grep -q 'OV2.vst3'
+          lsbom expanded-pkg/Bom | grep -q 'OV1.component'
+          lsbom expanded-pkg/Bom | grep -q 'OV2.component'
           cd dist && zip -qr ../OV1_OV2_macOS_Intel.zip .
       - uses: actions/upload-artifact@v4
         with:
