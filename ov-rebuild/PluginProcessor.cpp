@@ -43,11 +43,12 @@ public:
 #else
         const float wet=std::atan(dry*drive)*(2.f/juce::MathConstants<float>::pi);
 #endif
-        float processed=dry+(wet-dry)*mix;
+        float shaped=wet;
 #if defined(OV_PRODUCT_OV1TriFusion) || defined(OV_PRODUCT_OV2TriFusion)
-        // TriFusion experimental stage: gentle peak control after the base processor.
-        processed=std::tanh(processed*1.15f)/std::tanh(1.15f);
+        // Experimental peak shaping on the wet path only; mix=0 must remain dry.
+        shaped=std::tanh(wet*1.15f)/std::tanh(1.15f);
 #endif
+        const float processed=dry+(shaped-dry)*mix;
         samples[i]=output*processed;
       }
     }
