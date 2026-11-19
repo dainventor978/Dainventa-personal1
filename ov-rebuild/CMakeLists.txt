@@ -16,7 +16,6 @@ foreach(PRODUCT IN ITEMS OV1 OV2)
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
     COPY_PLUGIN_AFTER_BUILD FALSE)
-  juce_generate_juce_header(${PRODUCT})
   target_sources(${PRODUCT} PRIVATE PluginProcessor.cpp)
   target_compile_definitions(${PRODUCT} PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 OV_PRODUCT_${PRODUCT}=1)
   target_link_libraries(${PRODUCT} PRIVATE juce::juce_audio_utils juce::juce_dsp juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
