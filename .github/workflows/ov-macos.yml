@@ -72,6 +72,11 @@ jobs:
           pkgutil --expand OV1_OV2_macOS_Intel_unsigned.pkg expanded-pkg
           test -f expanded-pkg/PackageInfo
           test -f expanded-pkg/Bom
+          # Verify every installed bundle's executable is Intel-compatible.
+          for name in OV1 OV2 OV1TriFusion OV2TriFusion; do
+            lipo -archs "installer-root/Library/Audio/Plug-Ins/VST3/${name}.vst3/Contents/MacOS/${name}" | grep -qw x86_64
+            lipo -archs "installer-root/Library/Audio/Plug-Ins/Components/${name}.component/Contents/MacOS/${name}" | grep -qw x86_64
+          done
           lsbom expanded-pkg/Bom | grep -q 'OV1.vst3'
           lsbom expanded-pkg/Bom | grep -q 'OV2.vst3'
           lsbom expanded-pkg/Bom | grep -q 'OV1.component'
