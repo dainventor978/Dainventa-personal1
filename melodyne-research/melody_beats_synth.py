@@ -102,30 +102,53 @@ def render(events, patch_name="warm_pad", rate=RATE):
     # Smooth bounded output, no clipping.
     return b"".join(struct.pack("<h", int(32767 * math.tanh(x))) for x in mix)
 
-def trifusion_process(pcm):
+def trifusion_matrix(events):
+    """Map melody-note statistics to safe TriFusion processing parameters.
+    This control matrix reads MIDI events; it does not alter or generate notes.
+    """
+    if not events:
+        return {"drive": 1.0, "ceiling": 0.8, "output": 0.9}
+    if any(start < 0 or duration <= 0 or not 0 <= pitch <= 127 or not 1 <= velocity <= 127
+           for start, duration, pitch, velocity in events):
+        raise ValueError("Invalid MIDI note event")
+    mean_velocity = sum(v for _, _, _, v in events) / (127.0 * len(events))
+    mean_pitch = sum(p for _, _, p, _ in events) / len(events)
+    length = max(start + duration for start, duration, _, _ in events)
+    density = min(1.0, len(events) / max(length * 8.0, 1.0))
+    # More notes and louder performances get less saturation and more headroom.
+    drive = max(1.0, min(2.5, 2.3 - 0.55 * density - 0.35 * mean_velocity))
+    ceiling = max(0.62, min(0.85, 0.85 - 0.14 * density - 0.03 * (mean_pitch / 127.0)))
+    return {"drive": drive, "ceiling": ceiling, "output": 0.9}
+
+
+def trifusion_process(pcm, matrix=None):
     """TriFusion post-engine: DC blocker, saturation, envelope gain control.
     Adapted from trifusion/trifusion.cpp; independent from MIDI synthesis.
     Operates on signed 16-bit mono PCM. Prototype, not real-time optimized.
     """
     if len(pcm) % 2:
         raise ValueError("PCM data must contain complete 16-bit samples")
+    matrix = matrix or {"drive": 2.0, "ceiling": 0.8, "output": 0.9}
+    drive, ceiling, output = (matrix[k] for k in ("drive", "ceiling", "output"))
+    if not (0.5 <= drive <= 3.0 and 0.5 <= ceiling <= 0.95 and 0 <= output <= 1):
+        raise ValueError("Invalid TriFusion matrix settings")
     last_input = last_output = envelope_peak = 0.0
     result = bytearray(len(pcm))
     for i in range(0, len(pcm), 2):
         sample = struct.unpack_from("<h", pcm, i)[0] / 32768.0
         dc = sample - last_input + 0.995 * last_output
         last_input, last_output = sample, dc
-        saturated = math.tanh(dc * 2.0) / math.tanh(2.0)
+        saturated = math.tanh(dc * drive) / math.tanh(drive)
         envelope_peak = max(abs(saturated), envelope_peak * 0.9995)
-        gain = 0.8 / envelope_peak if envelope_peak > 0.8 else 1.0
-        processed = max(-0.98, min(0.98, saturated * gain * 0.9))
+        gain = ceiling / envelope_peak if envelope_peak > ceiling else 1.0
+        processed = max(-0.98, min(0.98, saturated * gain * output))
         struct.pack_into("<h", result, i, round(processed * 32767))
     return bytes(result)
 
 def write_wav(filename, events, patch_name="warm_pad", trifusion=False):
     pcm = render(events, patch_name)
     if trifusion:
-        pcm = trifusion_process(pcm)
+        pcm = trifusion_process(pcm, trifusion_matrix(events))
     with wave.open(str(filename), "wb") as wav:
         wav.setnchannels(1)
         wav.setsampwidth(2)
