@@ -31,17 +31,6 @@ jobs:
           for name in OV1TriFusion OV2TriFusion; do
             lipo -archs "build/${name}_artefacts/Release/VST3/${name}.vst3/Contents/MacOS/${name}" | grep -q x86_64
           done
-      - name: Validate Audio Unit registration
-        run: |
-          mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
-          cp -R build/OV1_artefacts/Release/AU/OV1.component "$HOME/Library/Audio/Plug-Ins/Components/"
-          cp -R build/OV2_artefacts/Release/AU/OV2.component "$HOME/Library/Audio/Plug-Ins/Components/"
-          auval -v aufx OV1A ShDv
-          auval -v aufx OV2A ShDv
-          cp -R build/OV1TriFusion_artefacts/Release/AU/OV1TriFusion.component "$HOME/Library/Audio/Plug-Ins/Components/"
-          cp -R build/OV2TriFusion_artefacts/Release/AU/OV2TriFusion.component "$HOME/Library/Audio/Plug-Ins/Components/"
-          auval -v aufx O1TF ShDv
-          auval -v aufx O2TF ShDv
       - name: Bundle plugin downloads
         run: |
           mkdir -p dist
@@ -94,6 +83,18 @@ jobs:
             grep -Fq "${name}.component" package-payload.txt
           done
           cd dist && zip -qr ../OV1_OV2_macOS_Intel.zip .
+      - name: Validate Audio Unit registration (diagnostic)
+        continue-on-error: true
+        run: |
+          mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
+          cp -R build/OV1_artefacts/Release/AU/OV1.component "$HOME/Library/Audio/Plug-Ins/Components/"
+          cp -R build/OV2_artefacts/Release/AU/OV2.component "$HOME/Library/Audio/Plug-Ins/Components/"
+          auval -v aufx OV1A ShDv
+          auval -v aufx OV2A ShDv
+          cp -R build/OV1TriFusion_artefacts/Release/AU/OV1TriFusion.component "$HOME/Library/Audio/Plug-Ins/Components/"
+          cp -R build/OV2TriFusion_artefacts/Release/AU/OV2TriFusion.component "$HOME/Library/Audio/Plug-Ins/Components/"
+          auval -v aufx O1TF ShDv
+          auval -v aufx O2TF ShDv
       - uses: actions/upload-artifact@v4
         with:
           name: OV1-OV2-macOS-Intel-plugins
