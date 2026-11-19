@@ -15,8 +15,12 @@ public:
   const juce::String getName() const override {
 #if defined(OV_PRODUCT_OV1)
     return "OV1";
-#else
+#elif defined(OV_PRODUCT_OV2)
     return "OV2";
+#elif defined(OV_PRODUCT_OV1TriFusion)
+    return "OV1 TriFusion";
+#else
+    return "OV2 TriFusion";
 #endif
   }
   void prepareToPlay(double,int) override {}
@@ -34,12 +38,17 @@ public:
       auto* samples=b.getWritePointer(c);
       for(int i=0;i<b.getNumSamples();++i) {
         const float dry=samples[i];
-#if defined(OV_PRODUCT_OV1)
+#if defined(OV_PRODUCT_OV1) || defined(OV_PRODUCT_OV1TriFusion)
         const float wet=std::tanh(dry*drive)*normalizer;
 #else
         const float wet=std::atan(dry*drive)*(2.f/juce::MathConstants<float>::pi);
 #endif
-        samples[i]=output*(dry+(wet-dry)*mix);
+        float processed=dry+(wet-dry)*mix;
+#if defined(OV_PRODUCT_OV1TriFusion) || defined(OV_PRODUCT_OV2TriFusion)
+        // TriFusion experimental stage: gentle peak control after the base processor.
+        processed=std::tanh(processed*1.15f)/std::tanh(1.15f);
+#endif
+        samples[i]=output*processed;
       }
     }
   }
