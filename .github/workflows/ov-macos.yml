@@ -10,6 +10,8 @@ jobs:
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
+      - name: Offline DSP regression
+        run: python3 ov-rebuild/test_dsp.py
       - name: Configure
         run: cmake -S ov-rebuild -B build -G Xcode -DCMAKE_BUILD_TYPE=Release
       - name: Build OV1 and OV2
