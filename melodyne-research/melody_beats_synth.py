@@ -149,13 +149,15 @@ def trifusion_matrix(events):
     return {"drive": drive, "ceiling": ceiling, "output": 0.9}
 
 
-def trifusion_process(pcm, matrix=None):
+def trifusion_process(pcm, matrix=None, rate=RATE):
     """TriFusion post-engine: DC blocker, saturation, envelope gain control.
     Adapted from trifusion/trifusion.cpp; independent from MIDI synthesis.
     Operates on signed 16-bit mono PCM. Prototype, not real-time optimized.
     """
     if len(pcm) % 2:
         raise ValueError("PCM data must contain complete 16-bit samples")
+    if rate <= 0:
+        raise ValueError("Sample rate must be positive")
     matrix = matrix or {"drive": 2.0, "ceiling": 0.8, "output": 0.9}
     drive, ceiling, output = (matrix[k] for k in ("drive", "ceiling", "output"))
     if not (0.5 <= drive <= 3.0 and 0.5 <= ceiling <= 0.95 and 0 <= output <= 1):
@@ -165,6 +167,8 @@ def trifusion_process(pcm, matrix=None):
     if not (-.3 <= eq_low <= .3 and -.3 <= eq_high <= .3):
         raise ValueError("Invalid instrument EQ settings")
     low_state = 0.0
+    # Approximate a 175 Hz low shelf pivot consistently across sample rates.
+    low_alpha = 1.0 - math.exp(-TAU * 175.0 / rate)
     last_input = last_output = envelope_peak = 0.0
     result = bytearray(len(pcm))
     for i in range(0, len(pcm), 2):
@@ -172,7 +176,7 @@ def trifusion_process(pcm, matrix=None):
         dc = sample - last_input + 0.995 * last_output
         last_input, last_output = sample, dc
         # Simple two-band tilt EQ: low-pass state plus complementary high band.
-        low_state += 0.025 * (dc - low_state)
+        low_state += low_alpha * (dc - low_state)
         shaped = dc + eq_low * low_state + eq_high * (dc - low_state)
         saturated = math.tanh(shaped * drive) / math.tanh(drive)
         envelope_peak = max(abs(saturated), envelope_peak * 0.9995)
@@ -181,10 +185,18 @@ def trifusion_process(pcm, matrix=None):
         struct.pack_into("<h", result, i, round(processed * 32767))
     return bytes(result)
 
+def render_track(events, patch_name="warm_pad", trifusion=False, rate=RATE):
+    """Render MIDI notes through selected instrument and optional TriFusion stage.
+
+    Offline reference path. No audio-thread or low-latency performance claim.
+    """
+    pcm = render(events, patch_name, rate)
+    if trifusion and pcm:
+        pcm = trifusion_process(pcm, instrument_matrix(patch_name, events), rate=rate)
+    return pcm
+
 def write_wav(filename, events, patch_name="warm_pad", trifusion=False):
-    pcm = render(events, patch_name)
-    if trifusion:
-        pcm = trifusion_process(pcm, instrument_matrix(patch_name, events))
+    pcm = render_track(events, patch_name, trifusion)
     with wave.open(str(filename), "wb") as wav:
         wav.setnchannels(1)
         wav.setsampwidth(2)
