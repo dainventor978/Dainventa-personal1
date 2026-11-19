@@ -22,7 +22,8 @@ for name in variants:
         assert math.isfinite(y), (name,x,y)
         assert abs(y+process(-x,name))<1e-10
         assert abs(y)<=1.001, (name,x,y)
-    assert abs(process(.5,name,mix=0)-.5)<1e-12 if not name.endswith('TriFusion') else True
+    if not name.endswith('TriFusion'):
+        assert abs(process(.5,name,mix=0)-.5)<1e-12
 assert process(.5,'OV1')!=process(.5,'OV1TriFusion')
 assert process(.5,'OV2')!=process(.5,'OV2TriFusion')
 print('Four-variant DSP math regression passed')
