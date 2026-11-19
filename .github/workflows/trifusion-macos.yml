@@ -1,0 +1,33 @@
+name: TriFusion macOS build
+on:
+  push:
+    paths:
+      - 'trifusion/**'
+      - '.github/workflows/trifusion-macos.yml'
+  workflow_dispatch:
+jobs:
+  macos:
+    runs-on: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile TriFusion CLI
+        run: |
+          clang++ -std=c++17 -O2 trifusion/trifusion.cpp -o trifusion/trifusion
+      - name: Smoke test
+        run: |
+          python3 - <<'PY'
+          import wave, math, struct
+          with wave.open("input.wav","wb") as f:
+              f.setnchannels(2);f.setsampwidth(2);f.setframerate(44100)
+              f.writeframes(b"".join(struct.pack("<hh",int(10000*math.sin(2*math.pi*440*i/44100)),int(10000*math.sin(2*math.pi*440*i/44100))) for i in range(4410)))
+          PY
+          ./trifusion/trifusion input.wav output.wav
+          python3 - <<'PY'
+          import wave
+          with wave.open("output.wav") as f:
+              assert f.getnchannels()==2 and f.getnframes()==4410
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TriFusion-macOS-Intel-CLI
+          path: trifusion/trifusion
