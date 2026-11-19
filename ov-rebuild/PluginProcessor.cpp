@@ -1,4 +1,5 @@
-#include <JuceHeader.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_gui_extra/juce_gui_extra.h>
 #include <cmath>
 class OVProcessor final : public juce::AudioProcessor {
 public:
