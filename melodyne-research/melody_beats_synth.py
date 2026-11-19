@@ -102,8 +102,30 @@ def render(events, patch_name="warm_pad", rate=RATE):
     # Smooth bounded output, no clipping.
     return b"".join(struct.pack("<h", int(32767 * math.tanh(x))) for x in mix)
 
-def write_wav(filename, events, patch_name="warm_pad"):
+def trifusion_process(pcm):
+    """TriFusion post-engine: DC blocker, saturation, envelope gain control.
+    Adapted from trifusion/trifusion.cpp; independent from MIDI synthesis.
+    Operates on signed 16-bit mono PCM. Prototype, not real-time optimized.
+    """
+    if len(pcm) % 2:
+        raise ValueError("PCM data must contain complete 16-bit samples")
+    last_input = last_output = envelope_peak = 0.0
+    result = bytearray(len(pcm))
+    for i in range(0, len(pcm), 2):
+        sample = struct.unpack_from("<h", pcm, i)[0] / 32768.0
+        dc = sample - last_input + 0.995 * last_output
+        last_input, last_output = sample, dc
+        saturated = math.tanh(dc * 2.0) / math.tanh(2.0)
+        envelope_peak = max(abs(saturated), envelope_peak * 0.9995)
+        gain = 0.8 / envelope_peak if envelope_peak > 0.8 else 1.0
+        processed = max(-0.98, min(0.98, saturated * gain * 0.9))
+        struct.pack_into("<h", result, i, round(processed * 32767))
+    return bytes(result)
+
+def write_wav(filename, events, patch_name="warm_pad", trifusion=False):
     pcm = render(events, patch_name)
+    if trifusion:
+        pcm = trifusion_process(pcm)
     with wave.open(str(filename), "wb") as wav:
         wav.setnchannels(1)
         wav.setsampwidth(2)
@@ -114,8 +136,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", default="melody_beats_demo.wav")
     parser.add_argument("--patch", choices=sorted(PATCHES), default="warm_pad")
+    parser.add_argument("--trifusion", action="store_true", help="Enable second processing engine")
     args = parser.parse_args()
     # Identical notes with any patch: changing patch never changes MIDI.
     melody = [(0., .35, 60, 110), (.4, .35, 64, 105), (.8, .35, 67, 105), (1.2, .7, 72, 115)]
-    write_wav(args.out, melody, args.patch)
-    print("Rendered", args.out, "using", args.patch)
+    write_wav(args.out, melody, args.patch, trifusion=args.trifusion)
+    print("Rendered", args.out, "using", args.patch, "TriFusion:", args.trifusion)
