@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Generate instrument-agnostic MIDI groove clips (standard MIDI format 1).
-No audio, samples, or virtual instruments are embedded.
+"""Generate melodic and harmonic MIDI phrase clips (standard MIDI format 1).
+No drums, audio, samples, or virtual instruments are embedded.
 Run: python3 midi_groove_generator.py --out grooves
 """
 import argparse
@@ -10,13 +10,6 @@ import struct
 PPQ = 480
 BPM = 120
 # name, GM drum note, hits in 16 steps, velocities
-DRUMS = {
-    "four_on_floor": [(36,[0,4,8,12],110),(38,[4,12],100),(42,[2,6,10,14],75)],
-    "backbeat": [(36,[0,7,8,14],108),(38,[4,12],108),(42,[0,2,4,6,8,10,12,14],68)],
-    "half_time": [(36,[0,6,10],110),(38,[8],112),(42,[0,2,4,6,8,10,12,14],65)],
-    "syncopated": [(36,[0,3,7,10,14],104),(38,[4,12,15],92),(42,[0,2,5,7,8,10,13,15],66)],
-    "trap": [(36,[0,6,10,14],112),(38,[8],108),(42,[0,2,3,4,6,7,8,10,11,12,14,15],65)],
-}
 # Each bass/keys clip uses pitch-relative note events. Users can transpose after drag/drop.
 MELODIC = {
     "bass_pulse": [(0,0,2,105),(4,0,2,96),(7,7,1,90),(8,0,2,110),(12,5,2,93),(15,7,1,90)],
@@ -65,13 +58,10 @@ def midi_file(notes, channel=0, bars=4, bpm=BPM):
 
 def generate(out, bpm=120, bars=4, root=48):
     out.mkdir(parents=True, exist_ok=True)
-    for name, lanes in DRUMS.items():
-        notes = [(step, note, 1, vel) for note, steps, vel in lanes for step in steps]
-        (out / f"drums_{name}.mid").write_bytes(midi_file(notes, channel=9, bars=bars, bpm=bpm))
     for name, pattern in MELODIC.items():
         notes = [(step, root + offset, duration, velocity) for step, offset, duration, velocity in pattern]
         (out / f"{name}.mid").write_bytes(midi_file(notes, bars=bars, bpm=bpm))
-    return len(DRUMS) + len(MELODIC)
+    return len(MELODIC)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
