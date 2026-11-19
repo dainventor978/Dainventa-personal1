@@ -37,7 +37,7 @@ jobs:
       - name: Bundle plugin downloads
         run: |
           mkdir -p dist
-          find build -type d \( -name 'OV1.vst3' -o -name 'OV2.vst3' -o -name 'OV1.component' -o -name 'OV2.component' \) -prune -exec cp -R {} dist/ \;
+          find build -type d \( -name '*.vst3' -o -name '*.component' \) -prune -exec cp -R {} dist/ \;
           test -d dist/OV1.vst3
           test -d dist/OV2.vst3
           test -d dist/OV1TriFusion.vst3
