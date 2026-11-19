@@ -15,7 +15,7 @@ jobs:
           clang++ -std=c++17 -O2 trifusion/trifusion.cpp -o trifusion/trifusion
       - name: Compile and run TriFusion intelligence-core tests
         run: |
-          clang++ -std=c++17 -O2 -Wall -Wextra -Werror trifusion/tests/intelligence_core_test.cpp -o trifusion/intelligence_core_test
+          clang++ -std=c++17 -O2 -Wall -Wextra -Werror -Itrifusion trifusion/tests/intelligence_core_test.cpp -o trifusion/intelligence_core_test
           ./trifusion/intelligence_core_test
       - name: Smoke test
         run: |
