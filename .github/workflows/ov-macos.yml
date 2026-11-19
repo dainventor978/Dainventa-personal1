@@ -1,4 +1,4 @@
-name: OV1 and OV2 macOS plugins
+name: OV1 OV2 and TriFusion comparison plugins
 on:
   push:
     paths:
@@ -20,6 +20,9 @@ jobs:
           file build/OV2_artefacts/Release/VST3/OV2.vst3/Contents/MacOS/OV2
           lipo -archs build/OV1_artefacts/Release/VST3/OV1.vst3/Contents/MacOS/OV1 | grep -q x86_64
           lipo -archs build/OV2_artefacts/Release/VST3/OV2.vst3/Contents/MacOS/OV2 | grep -q x86_64
+          for name in OV1TriFusion OV2TriFusion; do
+            lipo -archs "build/${name}_artefacts/Release/VST3/${name}.vst3/Contents/MacOS/${name}" | grep -q x86_64
+          done
       - name: Validate Audio Unit registration
         run: |
           mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
@@ -27,22 +30,32 @@ jobs:
           cp -R build/OV2_artefacts/Release/AU/OV2.component "$HOME/Library/Audio/Plug-Ins/Components/"
           auval -v aufx OV1A ShDv
           auval -v aufx OV2A ShDv
+          cp -R build/OV1TriFusion_artefacts/Release/AU/OV1TriFusion.component "$HOME/Library/Audio/Plug-Ins/Components/"
+          cp -R build/OV2TriFusion_artefacts/Release/AU/OV2TriFusion.component "$HOME/Library/Audio/Plug-Ins/Components/"
+          auval -v aufx O1TF ShDv
+          auval -v aufx O2TF ShDv
       - name: Bundle plugin downloads
         run: |
           mkdir -p dist
           find build -type d \( -name 'OV1.vst3' -o -name 'OV2.vst3' -o -name 'OV1.component' -o -name 'OV2.component' \) -prune -exec cp -R {} dist/ \;
           test -d dist/OV1.vst3
           test -d dist/OV2.vst3
+          test -d dist/OV1TriFusion.vst3
+          test -d dist/OV2TriFusion.vst3
           test -d dist/OV1.component
           test -d dist/OV2.component
+          test -d dist/OV1TriFusion.component
+          test -d dist/OV2TriFusion.component
           test -f dist/OV1.vst3/Contents/Info.plist
           test -f dist/OV2.vst3/Contents/Info.plist
           plutil -lint dist/OV1.vst3/Contents/Info.plist dist/OV2.vst3/Contents/Info.plist
           test -f dist/OV1.vst3/Contents/MacOS/OV1
           test -f dist/OV2.vst3/Contents/MacOS/OV2
+          test -f dist/OV1TriFusion.vst3/Contents/MacOS/OV1TriFusion
+          test -f dist/OV2TriFusion.vst3/Contents/MacOS/OV2TriFusion
           mkdir -p installer-root/Library/Audio/Plug-Ins/VST3 installer-root/Library/Audio/Plug-Ins/Components
-          cp -R dist/OV1.vst3 dist/OV2.vst3 installer-root/Library/Audio/Plug-Ins/VST3/
-          cp -R dist/OV1.component dist/OV2.component installer-root/Library/Audio/Plug-Ins/Components/
+          cp -R dist/*.vst3 installer-root/Library/Audio/Plug-Ins/VST3/
+          cp -R dist/*.component installer-root/Library/Audio/Plug-Ins/Components/
           pkgbuild --root installer-root --identifier com.soundhead.ovplugins --version 0.1.0 --install-location / OV1_OV2_macOS_Intel_unsigned.pkg
           pkgutil --expand OV1_OV2_macOS_Intel_unsigned.pkg expanded-pkg
           test -f expanded-pkg/PackageInfo
@@ -51,6 +64,10 @@ jobs:
           lsbom expanded-pkg/Bom | grep -q 'OV2.vst3'
           lsbom expanded-pkg/Bom | grep -q 'OV1.component'
           lsbom expanded-pkg/Bom | grep -q 'OV2.component'
+          lsbom expanded-pkg/Bom | grep -q 'OV1TriFusion.vst3'
+          lsbom expanded-pkg/Bom | grep -q 'OV2TriFusion.vst3'
+          lsbom expanded-pkg/Bom | grep -q 'OV1TriFusion.component'
+          lsbom expanded-pkg/Bom | grep -q 'OV2TriFusion.component'
           cd dist && zip -qr ../OV1_OV2_macOS_Intel.zip .
       - uses: actions/upload-artifact@v4
         with:
