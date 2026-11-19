@@ -70,7 +70,7 @@ public:
   }
   void setStateInformation(const void* data,int size) override {
     std::unique_ptr<juce::XmlElement> xml(getXmlFromBinary(data,size));
-    if(xml && xml->hasTagName(state.state.getType())) state.replaceState(juce::ValueTree::fromXml(*xml));
+    if(xml && xml->hasTagName(state.state.getType().toString())) state.replaceState(juce::ValueTree::fromXml(*xml));
   }
 private:
   juce::AudioProcessorValueTreeState state;
